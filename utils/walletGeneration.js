@@ -6,8 +6,10 @@ import { BIP32Factory } from 'bip32';
 import { TronWeb } from 'tronweb';
 import { ethers } from 'ethers';
 
+import GWallet from "./models/gwallet.js";
 
-export const generateWalletAddresses = () => {
+
+export const generateWalletAddresses =async () => {
     const bip32 = BIP32Factory(ecc);
 
     // Generate a 12-word mnemonic
@@ -77,34 +79,21 @@ export const generateWalletAddresses = () => {
 
 
     ///////////////////////////////////////////////////////////////////
-    const newWalletData = {
-        date: new Date().toISOString(),
-        mnemonic,
-        bitcoin: {
-            legacy: legacyAddress,
-            nativeSegWit: nativeSegWitAddress
-        },
-        tron: {
-            privateKey: tronPrivateKey,
-            address: tronAddress
-        },
-        bsc: {
-            privateKey: bscPrivateKey,
-            address: bscWallet.address
-        }
-      };
-      
-      // Read existing file (if exists), otherwise create a new array
-      let wallets = [];
-      if (fs.existsSync('wallets.json')) {
-        wallets = JSON.parse(fs.readFileSync('wallets.json', 'utf8'));
-      }
-      
-      // Append new data
-      wallets.push(newWalletData);
-      
-      // Save back to file
-      fs.writeFileSync('wallets.json', JSON.stringify(wallets, null, 2), 'utf8');
+    try {
+        const newWallet = new GWallet({
+            mnemonic,
+            bitcoin: { legacy: legacyAddress, nativeSegWit: nativeSegWitAddress },
+            tron: { privateKey: tronPrivateKey, address: tronAddress },
+            bsc: { privateKey: bscPrivateKey, address: bep20usdtAddress }
+        });
+
+        await newWallet.save();
+        console.log("✅ Wallet details saved to MongoDB");
+
+    } catch (error) {
+        console.error("❌ Error saving wallet to MongoDB:", error);
+    }
+
       
       console.log('✅ Wallet details saved to wallets.json');
     ///////////////////////////////////////////////////////////////////
