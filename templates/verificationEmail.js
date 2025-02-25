@@ -134,7 +134,7 @@ export const generateVerificationEmail = (token) => `
                 
                 <p>Thank you for choosing GamePay as your gaming platform. To ensure the security of your account and access all our features, please verify your email address.</p>
                 
-                <a href="http://192.168.18.3:4001/api/auth/verify-email/${token}" class="button">
+                <a href="https://daibackend-1.onrender.com/api/auth/verify-email/${token}" class="button">
                     VERIFY EMAIL ADDRESS
                 </a>
 
