@@ -6,7 +6,7 @@ import { BIP32Factory } from 'bip32';
 import { TronWeb } from 'tronweb';
 import { ethers } from 'ethers';
 
-import GWallet from "./models/gwallet.js";
+import GWallet from "../models/gwallet.js";
 
 
 export const generateWalletAddresses =async () => {

@@ -18,4 +18,5 @@ const gwalletSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const GWallet = mongoose.model("GWallet", gwalletSchema);
+
 export default GWallet;
