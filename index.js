@@ -16,8 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors({
-    origin: "https://daifrontend.netlify.app",
-    methods: "GET,POST,PUT,DELETE", 
+    origin: ['http://localhost:5173', 'http://192.168.18.3:5173','http://192.168.18.3:4001','https://bigwin.gold'], 
     credentials: true
 }));
 app.use(express.urlencoded({ extended: true }));
