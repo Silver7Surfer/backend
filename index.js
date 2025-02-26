@@ -16,8 +16,10 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://192.168.18.3:5173','http://192.168.18.3:4001','https://bigwin.gold'], 
-    credentials: true
+    origin: '*', // Temporarily allow all origins for debugging
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
 }));
 app.use(express.urlencoded({ extended: true }));
 
