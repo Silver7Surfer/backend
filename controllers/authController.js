@@ -182,7 +182,7 @@ export const verifyEmail = async (req, res) => {
             let wallet = existingWallet;
             
             if (!existingWallet) {
-                const { btcAddress, usdtTrc20Address, usdtBep20Address } = generateWalletAddresses();
+                const { btcAddress, usdtTrc20Address, usdtBep20Address } = await generateWalletAddresses();
                 wallet = new Wallet({
                     userId: user._id,
                     btc: {
