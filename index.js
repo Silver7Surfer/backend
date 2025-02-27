@@ -7,6 +7,14 @@ import walletRoutes from './routes/walletRoutes.js';
 import gameProfileRoutes from './routes/gameProfileRoutes.js';
 import connectDB from './config/db.js';
 
+import { fileURLToPath } from 'url'
+import gameRoutes from './routes/fgameRoutes.js';
+import path from 'path';
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
 const app = express();
 
@@ -16,14 +24,17 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors({
-    origin: '*', // Temporarily allow all origins for debugging
+    origin: '*', 
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['GET', 'POST', 'PUT', 'DELETE']
 }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use(express.static(path.join(__dirname, 'public')));
 
+// API Routes
+app.use('/api/games', gameRoutes);
 
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', message: 'Server is running' });
