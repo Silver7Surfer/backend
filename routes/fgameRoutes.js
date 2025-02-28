@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
+
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -172,6 +173,195 @@ router.get('/details/:id', (req, res) => {
       error: error.message
     });
   }
+});
+
+router.get('/winners', (req, res) => {
+  // Mock data for winners
+  const winners = [
+    {
+        "platform": "Ultra Panda",
+        "user_email": "m****0@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/UltraPanda_5_1.webp"
+    },
+    {
+        "platform": "Milky Way",
+        "user_email": "b****6@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/milkyway2023-01-18_125257.1599500000_1.webp"
+    },
+    {
+        "platform": "TAI CHI Master",
+        "user_email": "j****7@gmail.com",
+        "amount": 600,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/TaiChiMaster.webp"
+    },
+    {
+        "platform": "Vegas Sweeps",
+        "user_email": "d****6@gmail.com",
+        "amount": 500,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/VegasSweeps_4.png"
+    },
+    {
+        "platform": "Ultra Panda",
+        "user_email": "m****0@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/UltraPanda_5_1.webp"
+    },
+    {
+        "platform": "Ultra Panda",
+        "user_email": "g****c@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/UltraPanda_5_1.webp"
+    },
+    {
+        "platform": "Game Vault",
+        "user_email": "b****3@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/game-vault-logo-new_1.webp"
+    },
+    {
+        "platform": "Lucky Fish",
+        "user_email": "s****2@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/logo.png"
+    },
+    {
+        "platform": "Golden Treasure",
+        "user_email": "m****0@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/mages_golden_treasure-logo_1.webp"
+    },
+    {
+        "platform": "Orion Stars",
+        "user_email": "d****1@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/OrionStar_3_1.webp"
+    },
+    {
+        "platform": "Orion Stars",
+        "user_email": "d****3@gmail.com",
+        "amount": 350,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/OrionStar_3_1.webp"
+    },
+    {
+        "platform": "Gold Hunter",
+        "user_email": "j****7@gmail.com",
+        "amount": 600,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/gold_hunter-logo.webp"
+    },
+    {
+        "platform": "Golden Treasure",
+        "user_email": "m****0@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/mages_golden_treasure-logo_1.webp"
+    },
+    {
+        "platform": "Juwa",
+        "user_email": "g****c@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/Juwa_6_1.webp"
+    },
+    {
+        "platform": "Gold Hunter",
+        "user_email": "s****2@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/gold_hunter-logo.webp"
+    },
+    {
+        "platform": "ICE7",
+        "user_email": "a****z@gmail.com",
+        "amount": 400,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/ice7-logo_YMeipHO.png"
+    },
+    {
+        "platform": "Fire Kirin",
+        "user_email": "z****3@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/FireKirin_6_1.webp"
+    },
+    {
+        "platform": "Milky Way",
+        "user_email": "b****6@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/milkyway2023-01-18_125257.1599500000_1.webp"
+    },
+    {
+        "platform": "Gold Hunter",
+        "user_email": "j****7@gmail.com",
+        "amount": 600,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/gold_hunter-logo.webp"
+    },
+    {
+        "platform": "Orion Stars",
+        "user_email": "d****3@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/OrionStar_3_1.webp"
+    },
+    {
+        "platform": "Fire Kirin",
+        "user_email": "l****r@yahoo.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/FireKirin_6_1.webp"
+    },
+    {
+        "platform": "Ultra Panda",
+        "user_email": "j****0@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/UltraPanda_5_1.webp"
+    },
+    {
+        "platform": "Ultra Panda",
+        "user_email": "h****0@yahoo.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/UltraPanda_5_1.webp"
+    },
+    {
+        "platform": "Cash Machine",
+        "user_email": "s****2@gmail.com",
+        "amount": 420,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/cashmachine.webp"
+    },
+    {
+        "platform": "TAI CHI Master",
+        "user_email": "j****7@gmail.com",
+        "amount": 600,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/TaiChiMaster.webp"
+    },
+    {
+        "platform": "TAI CHI Master",
+        "user_email": "j****7@gmail.com",
+        "amount": 600,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/TaiChiMaster.webp"
+    },
+    {
+        "platform": "Lucky Stars",
+        "user_email": "h****3@gmail.com",
+        "amount": 500,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/image_13.png"
+    },
+    {
+        "platform": "Vegas Sweeps",
+        "user_email": "d****6@gmail.com",
+        "amount": 350,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/VegasSweeps_4.png"
+    },
+    {
+        "platform": "Ultra Panda",
+        "user_email": "s****4@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/UltraPanda_5_1.webp"
+    },
+    {
+        "platform": "Juwa",
+        "user_email": "c****o@gmail.com",
+        "amount": 300,
+        "logo": "https://bitplay-new.ams3.digitaloceanspaces.com/PROD/uploads/Juwa_6_1.webp"
+    }
+];
+
+  // Return the winners data
+  return res.status(200).json(winners);
 });
 
 export default router;
