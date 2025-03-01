@@ -1,6 +1,7 @@
 // controllers/gameProfileController.js
 import UserGameProfile from '../models/GameProfile.js';
 import Wallet from '../models/Wallet.js';
+import mongoose from 'mongoose';
 
 // Request new game profile
 export const requestGameProfile = async (req, res) => {
@@ -64,8 +65,19 @@ export const requestGameProfile = async (req, res) => {
 // Get all game profiles for a user
 export const getAllGameProfiles = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const { userId, role } = req.user;
         
+        // If admin, return all users' game profiles
+        if (role === 'admin') {
+            const allUserProfiles = await UserGameProfile.find().populate('userId', 'username email');
+            return res.json({
+                success: true,
+                isAdmin: true,
+                profiles: allUserProfiles
+            });
+        }
+        
+        // For regular users, return only their own profiles
         const userProfile = await UserGameProfile.findOne({ userId });
         if (!userProfile) {
             return res.json({
@@ -751,6 +763,244 @@ export const getSpecificGameProfile = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error fetching game profile',
+            error: error.message
+        });
+    }
+};
+
+// Admin disapproves credit amount request
+export const disapproveCredit = async (req, res) => {
+    try {
+        const { userId, gameName } = req.body;
+
+        // Validate inputs
+        if (!userId || !gameName) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId and gameName are required'
+            });
+        }
+
+        // Get the user profile and wallet without a session first
+        const userProfile = await UserGameProfile.findOne({ userId });
+        if (!userProfile) {
+            return res.status(404).json({
+                success: false,
+                message: 'User profile not found'
+            });
+        }
+
+        const gameIndex = userProfile.games.findIndex(game => game.gameName === gameName);
+        if (gameIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Game profile not found'
+            });
+        }
+
+        const gameProfile = userProfile.games[gameIndex];
+
+        if (gameProfile.creditAmount.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'No pending credit request found'
+            });
+        }
+
+        const userWallet = await Wallet.findOne({ userId });
+        if (!userWallet) {
+            return res.status(404).json({
+                success: false,
+                message: 'User wallet not found'
+            });
+        }
+
+        // Start a session for transaction
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            // Find the pending credit transaction
+            const transactionIndex = userWallet.transactions.findIndex(tx => 
+                tx.type === 'game_credit' && 
+                tx.gameName === gameName && 
+                tx.status === 'pending'
+            );
+
+            let refundedAmount = 0;
+            if (transactionIndex !== -1) {
+                // Mark transaction as rejected
+                userWallet.transactions[transactionIndex].status = 'rejected';
+                
+                // Get the amount to refund (stored as negative in the transaction)
+                refundedAmount = Math.abs(userWallet.transactions[transactionIndex].amount);
+                
+                // Refund amount to wallet balance
+                userWallet.totalBalanceUSD += refundedAmount;
+                userWallet.lastUpdated = new Date();
+            }
+
+            // Reset game profile credit request
+            userProfile.games[gameIndex].creditAmount.requestedAmount = 0;
+            userProfile.games[gameIndex].creditAmount.status = 'none';
+            
+            // Save both documents in the transaction
+            await UserGameProfile.findOneAndUpdate(
+                { _id: userProfile._id },
+                { $set: { 
+                    [`games.${gameIndex}.creditAmount.requestedAmount`]: 0,
+                    [`games.${gameIndex}.creditAmount.status`]: 'none'
+                }},
+                { session }
+            );
+            
+            await Wallet.findOneAndUpdate(
+                { _id: userWallet._id },
+                { 
+                    $set: { 
+                        [`transactions.${transactionIndex}.status`]: 'rejected',
+                        totalBalanceUSD: userWallet.totalBalanceUSD,
+                        lastUpdated: new Date()
+                    }
+                },
+                { session }
+            );
+
+            await session.commitTransaction();
+            session.endSession();
+
+            res.json({
+                success: true,
+                message: 'Credit request disapproved and funds refunded',
+                data: {
+                    gameProfile: userProfile.games[gameIndex],
+                    refundedAmount,
+                    wallet: {
+                        currentBalance: userWallet.totalBalanceUSD,
+                        lastUpdated: userWallet.lastUpdated
+                    }
+                }
+            });
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    } catch (error) {
+        console.error('Credit disapproval error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error disapproving credit request',
+            error: error.message
+        });
+    }
+};
+
+// Admin disapproves redeem request
+export const disapproveRedeem = async (req, res) => {
+    try {
+        const { userId, gameName } = req.body;
+
+        // Validate inputs
+        if (!userId || !gameName) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId and gameName are required'
+            });
+        }
+
+        // Get the user profile and wallet without a session first
+        const userProfile = await UserGameProfile.findOne({ userId });
+        if (!userProfile) {
+            return res.status(404).json({
+                success: false,
+                message: 'User profile not found'
+            });
+        }
+
+        const gameIndex = userProfile.games.findIndex(game => game.gameName === gameName);
+        if (gameIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Game profile not found'
+            });
+        }
+
+        const gameProfile = userProfile.games[gameIndex];
+
+        if (gameProfile.creditAmount.status !== 'pending_redeem') {
+            return res.status(400).json({
+                success: false,
+                message: 'No pending redeem request found'
+            });
+        }
+
+        const userWallet = await Wallet.findOne({ userId });
+        if (!userWallet) {
+            return res.status(404).json({
+                success: false,
+                message: 'User wallet not found'
+            });
+        }
+
+        // Start a session for transaction
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            // Find the pending redeem transaction
+            const transactionIndex = userWallet.transactions.findIndex(tx => 
+                tx.type === 'game_withdrawal' && 
+                tx.gameName === gameName && 
+                tx.status === 'pending'
+            );
+
+            // Reset game profile redeem request but keep the credit amount
+            await UserGameProfile.findOneAndUpdate(
+                { _id: userProfile._id },
+                { $set: { 
+                    [`games.${gameIndex}.creditAmount.requestedAmount`]: 0,
+                    [`games.${gameIndex}.creditAmount.status`]: 'none'
+                }},
+                { session }
+            );
+
+            if (transactionIndex !== -1) {
+                // Mark transaction as rejected
+                await Wallet.findOneAndUpdate(
+                    { _id: userWallet._id },
+                    { $set: { [`transactions.${transactionIndex}.status`]: 'rejected' }},
+                    { session }
+                );
+            }
+
+            await session.commitTransaction();
+            session.endSession();
+
+            res.json({
+                success: true,
+                message: 'Redeem request disapproved successfully',
+                data: {
+                    gameProfile: {
+                        ...userProfile.games[gameIndex].toObject(),
+                        creditAmount: {
+                            ...userProfile.games[gameIndex].creditAmount.toObject(),
+                            requestedAmount: 0,
+                            status: 'none'
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    } catch (error) {
+        console.error('Redeem disapproval error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error disapproving redeem request',
             error: error.message
         });
     }

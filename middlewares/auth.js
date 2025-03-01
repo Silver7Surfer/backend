@@ -19,6 +19,23 @@ export const authenticateToken = (req, res, next) => {
     }
 };
 
+export const authorizeRole = (roles) => {
+    return (req, res, next) => {
+      // The user object should be attached by the authenticateToken middleware
+      if (!req.user) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+  
+      // Check if user's role is included in the allowed roles
+      if (!roles.includes(req.user.role)) {
+        return res.status(403).json({ message: 'Access denied: insufficient permissions' });
+      }
+  
+      // If the role is authorized, proceed to the next middleware
+      next();
+    };
+  };
+
 export const authenticateMonitor = (req, res, next) => {
     const token = req.header('Authorization');
     if (!token || token !== `Bearer ${SECRET_KEY}`) {

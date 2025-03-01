@@ -329,3 +329,25 @@ export const resetPassword = async (req, res) => {
         res.status(500).json({ message: 'Error resetting password', error: error.message });
     }
 };
+
+export const isLoggedin = async (req, res) => {
+    try {
+        // Ensure userId is correct, adjust based on JWT payload
+        const userId = req.user.userId || req.user.id; 
+    
+        if (!userId) {
+          return res.status(401).json({ message: "Invalid token, user ID missing" });
+        }
+    
+        const user = await User.findById(userId).select("-password");
+    
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+    
+        res.json({ isAuthenticated: true, user });
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({ message: "Server error" });
+      }
+};
