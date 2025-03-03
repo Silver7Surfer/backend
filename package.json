@@ -23,6 +23,7 @@
     "express": "^4.21.2",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.5.0",
+    "geoip-lite": "^1.4.10",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.1",
@@ -31,6 +32,7 @@
     "socket.io": "^4.8.1",
     "tiny-secp256k1": "^2.2.3",
     "tronweb": "^6.0.1",
+    "ua-parser-js": "^2.0.2",
     "xss-clean": "^0.1.4"
   }
 }

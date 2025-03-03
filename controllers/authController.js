@@ -2,6 +2,9 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Wallet from '../models/Wallet.js';
+import UserLocation from '../models/UserLocation.js';
+import geoip from 'geoip-lite';
+import {UAParser} from 'ua-parser-js';
 import { getRandomProfileImage } from '../utils/profileImageHandler.js'
 
 import crypto from 'crypto';
@@ -10,13 +13,54 @@ import { generateVerificationEmail } from '../templates/verificationEmail.js';
 import { generateResetPasswordEmail } from '../templates/resetPasswordEmail.js';
 import { generateWalletAddresses } from '../utils/walletGeneration.js';
 
+
+
+const getLocationData = (req) => {
+    // Extract IP address, handling both IPv4 and IPv6
+    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    
+    // Clean up the IP address
+    if (ip.includes('::ffff:')) {
+      // Convert IPv6 format of IPv4 to standard IPv4
+      ip = ip.replace('::ffff:', '');
+    }
+    
+    // Try to get geo data
+    const geo = geoip.lookup(ip) || {};
+    
+    // Parse user agent
+    const userAgent = req.headers['user-agent'];
+    const parser = new UAParser(userAgent);
+    const browserInfo = parser.getBrowser();
+    const osInfo = parser.getOS();
+    const deviceInfo = parser.getDevice();
+    
+    return {
+      ip,
+      location: {
+        country: geo.country || null,
+        city: geo.city || null,
+        region: geo.region || null,
+        coordinates: {
+          lat: geo.ll ? geo.ll[0] : null,
+          lng: geo.ll ? geo.ll[1] : null
+        }
+      },
+      deviceInfo: {
+        userAgent: userAgent || null,
+        browser: browserInfo.name ? `${browserInfo.name} ${browserInfo.version || ''}` : null,
+        os: osInfo.name ? `${osInfo.name} ${osInfo.version || ''}` : null,
+        deviceType: (deviceInfo && deviceInfo.type) || 'unknown'
+      }
+    };
+  };
 // Modify the existing register function to include email verification
 export const register = async (req, res) => {
     try {
         const { username, email, password } = req.body;
         const assignedRole = req.body.role || 'user';
 
-        // Check existing user...
+        // Check existing user
         const existingEmail = await User.findOne({ email });
         const existingUsername = await User.findOne({ username });
 
@@ -38,10 +82,7 @@ export const register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-
         const profileImage = await getRandomProfileImage();
-
-
         
         // Create new user with verification token
         const newUser = new User({
@@ -72,6 +113,20 @@ export const register = async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        // Record registration location
+        try {
+            const locationData = getLocationData(req);
+            await UserLocation.create({
+                userId: savedUser._id,
+                email: savedUser.email,
+                ...locationData,
+                status: 'registration'
+            });
+        } catch (locationError) {
+            console.error('Error recording registration location:', locationError);
+            // Continue with registration even if location recording fails
+        }
+
         res.status(201).json({
             message: 'User registered successfully. Please verify your email.',
             token,
@@ -91,30 +146,78 @@ export const register = async (req, res) => {
     }
 };
 
+
 // Modify the existing login function to check verification
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        const locationData = getLocationData(req);
 
         // Find user by email
         const user = await User.findOne({ email });
+        
+        // Handle non-existent user
         if (!user) {
+            try {
+                // Record failed login attempt without userId
+                await UserLocation.create({
+                    email: email, // Store the attempted email
+                    ...locationData,
+                    status: 'failed'
+                });
+            } catch (locationError) {
+                console.error('Error recording failed login location:', locationError);
+            }
+            
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         // Check if email is verified
         if (!user.isVerified) {
+            try {
+                await UserLocation.create({
+                    userId: user._id,
+                    email: user.email,
+                    ...locationData,
+                    status: 'failed'
+                });
+            } catch (locationError) {
+                console.error('Error recording failed login location:', locationError);
+            }
+            
             return res.status(401).json({ message: 'Please verify your email before logging in' });
         }
 
         // Check if account is active
         if (!user.isActive) {
+            try {
+                await UserLocation.create({
+                    userId: user._id,
+                    email: user.email,
+                    ...locationData,
+                    status: 'failed'
+                });
+            } catch (locationError) {
+                console.error('Error recording failed login location:', locationError);
+            }
+            
             return res.status(401).json({ message: 'Account is deactivated' });
         }
 
         // Validate password
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
+            try {
+                await UserLocation.create({
+                    userId: user._id,
+                    email: user.email,
+                    ...locationData,
+                    status: 'failed'
+                });
+            } catch (locationError) {
+                console.error('Error recording failed login location:', locationError);
+            }
+            
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
@@ -133,8 +236,21 @@ export const login = async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        // Record successful login
+        try {
+            await UserLocation.create({
+                userId: user._id,
+                email: user.email,
+                ...locationData,
+                status: 'success'
+            });
+        } catch (locationError) {
+            console.error('Error recording successful login location:', locationError);
+            // Continue login process even if location recording fails
+        }
 
         const profileImageBase64 = user.profileImage.toString('base64');
+        
         // Send response
         res.json({
             message: 'Login successful',
@@ -145,7 +261,7 @@ export const login = async (req, res) => {
                 email: user.email,
                 lastLogin: user.lastLogin,
                 isVerified: user.isVerified,
-                role:user.role,
+                role: user.role,
                 profileImage: `data:${user.profileImageType};base64,${profileImageBase64}`
             }
         });
