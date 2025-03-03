@@ -17,7 +17,10 @@ import { generateWalletAddresses } from '../utils/walletGeneration.js';
 
 const getLocationData = (req) => {
     // Extract IP address, handling both IPv4 and IPv6
-    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    let ipString = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    
+    // If there are multiple IPs, take the first one (client's IP)
+    let ip = ipString.split(',')[0].trim();
     
     // Clean up the IP address
     if (ip.includes('::ffff:')) {
@@ -26,7 +29,26 @@ const getLocationData = (req) => {
     }
     
     // Try to get geo data
-    const geo = geoip.lookup(ip) || {};
+    let geo = null;
+    try {
+      geo = geoip.lookup(ip);
+      // If first IP fails, try others
+      if (!geo && ipString.includes(',')) {
+        const ips = ipString.split(',');
+        for (let i = 1; i < ips.length; i++) {
+          const alternateIp = ips[i].trim();
+          geo = geoip.lookup(alternateIp);
+          if (geo) {
+            ip = alternateIp; // Use the IP that worked
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Geolocation lookup error:', error);
+    }
+    
+    geo = geo || {}; // Ensure geo is an object even if lookup failed
     
     // Parse user agent
     const userAgent = req.headers['user-agent'];
