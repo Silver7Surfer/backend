@@ -680,8 +680,8 @@ export const initiateWithdraw = async (req, res) => {
             userWallet.totalBalanceUSD -= amount;
             userWallet.lastUpdated = new Date();
 
-            // Record withdrawal transaction
-            userWallet.transactions.push({
+            // Create the transaction object with explicit withdrawalAddress
+            const newTransaction = {
                 type: 'withdrawal',
                 asset,
                 network: asset === 'btc' ? 'btc' : network,
@@ -689,12 +689,37 @@ export const initiateWithdraw = async (req, res) => {
                 status: 'pending',
                 description: `Withdrawal request of ${amount} ${asset.toUpperCase()} via ${asset === 'btc' ? 'BTC' : network.toUpperCase()}`,
                 timestamp: new Date(),
-                withdrawalAddress: address
-            });
+                withdrawalAddress: address // Explicitly set the withdrawal address
+            };
+            
+            // Add to transactions array
+            userWallet.transactions.push(newTransaction);
 
+            // Save the wallet
             await userWallet.save({ session });
+            
+            // Get the transaction that was just added (last one in the array)
+            const lastTransaction = userWallet.transactions[userWallet.transactions.length - 1];
+
+            // Create a clean transaction object for the response that includes withdrawalAddress
+            const transactionResponse = {
+                type: lastTransaction.type,
+                asset: lastTransaction.asset,
+                network: lastTransaction.network,
+                amount: lastTransaction.amount,
+                gameName: lastTransaction.gameName,
+                gameId: lastTransaction.gameId,
+                status: lastTransaction.status,
+                timestamp: lastTransaction.timestamp,
+                txHash: lastTransaction.txHash,
+                description: lastTransaction.description,
+                withdrawalAddress: lastTransaction.withdrawalAddress, // Explicitly include this
+                _id: lastTransaction._id
+            };
+            
             await session.commitTransaction();
 
+            // Return response with the complete transaction object
             res.json({
                 success: true,
                 message: 'Withdrawal request initiated successfully',
@@ -711,7 +736,7 @@ export const initiateWithdraw = async (req, res) => {
                         currentBalance: userWallet.totalBalanceUSD,
                         lastUpdated: userWallet.lastUpdated
                     },
-                    transaction: userWallet.transactions[userWallet.transactions.length - 1]
+                    transaction: transactionResponse
                 }
             });
 
@@ -731,7 +756,6 @@ export const initiateWithdraw = async (req, res) => {
         });
     }
 };
-
 // Get specific game profile
 export const getSpecificGameProfile = async (req, res) => {
     try {

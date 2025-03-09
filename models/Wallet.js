@@ -1,4 +1,4 @@
-// models/Wallet.js
+// models/Wallet.js - Updated with withdrawalAddress
 import mongoose from 'mongoose';
 
 const walletSchema = new mongoose.Schema({
@@ -92,7 +92,11 @@ const walletSchema = new mongoose.Schema({
             type: String,
             default: null
         },
-        description: String
+        description: String,
+        withdrawalAddress: {
+            type: String,
+            default: null
+        }
     }],
     lastUpdated: {
         type: Date,

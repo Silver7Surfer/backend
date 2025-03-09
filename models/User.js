@@ -22,11 +22,11 @@ const userSchema = new mongoose.Schema({
         minlength: [6, 'Password must be at least 6 characters long']
     },
     profileImage: {
-        type: Buffer,  // Store the image as binary data
+        type: Buffer,
         required: true
     },
     profileImageType: {
-        type: String,  // Store the MIME type
+        type: String,
         required: true
     },
     isActive: {
@@ -47,12 +47,19 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpires: Date,
     role: {
         type: String,
-        enum: ['user', 'admin'], // Restrict to 'user' and 'admin'
-        default: 'user' // Default role is 'user'
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
+    assignedAdmin: {
+        type: String,
+        ref: 'User',
+        default: null
     }
 }, {
     timestamps: true
 });
 
+// Index for faster queries by assigned admin
+userSchema.index({ assignedAdmin: 1 });
 
 export default mongoose.model('User', userSchema);

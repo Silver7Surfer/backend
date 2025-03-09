@@ -6,6 +6,7 @@ import UserLocation from '../models/UserLocation.js';
 import geoip from 'geoip-lite';
 import {UAParser} from 'ua-parser-js';
 import { getRandomProfileImage } from '../utils/profileImageHandler.js'
+import mongoose from 'mongoose';
 
 import crypto from 'crypto';
 import { sendEmail } from '../utils/emailService.js';
@@ -79,8 +80,18 @@ const getLocationData = (req) => {
 // Modify the existing register function to include email verification
 export const register = async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, adminUsername } = req.body;
         const assignedRole = req.body.role || 'user';
+
+        // Validate required adminUsername
+        if (!adminUsername) {
+            return res.status(400).json({
+                message: 'Registration failed',
+                errors: {
+                    adminUsername: 'Admin username is required'
+                }
+            });
+        }
 
         // Check existing user
         const existingEmail = await User.findOne({ email });
@@ -96,17 +107,27 @@ export const register = async (req, res) => {
             });
         }
 
-        // Generate verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        // Verify admin exists in the admins collection
+        // We can directly query the admins collection since they share the same MongoDB database
+        const adminExists = await mongoose.connection.db.collection('admins').findOne({ username: adminUsername });
+        if (!adminExists) {
+            return res.status(400).json({
+                message: 'Registration failed',
+                errors: {
+                    adminUsername: 'Specified admin does not exist'
+                }
+            });
+        }
 
-        // Hash password
+        // Continue with normal registration flow
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         const profileImage = await getRandomProfileImage();
         
-        // Create new user with verification token
         const newUser = new User({
             username,
             email,
@@ -115,7 +136,8 @@ export const register = async (req, res) => {
             verificationTokenExpires,
             profileImage: profileImage.buffer,
             profileImageType: profileImage.type,
-            role: assignedRole
+            role: assignedRole,
+            assignedAdmin: adminUsername
         });
 
         const savedUser = await newUser.save();
@@ -130,7 +152,11 @@ export const register = async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { userId: savedUser._id , role: savedUser.role },
+            { 
+                userId: savedUser._id,
+                role: savedUser.role,
+                adminUsername: savedUser.assignedAdmin
+            },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -146,7 +172,6 @@ export const register = async (req, res) => {
             });
         } catch (locationError) {
             console.error('Error recording registration location:', locationError);
-            // Continue with registration even if location recording fails
         }
 
         res.status(201).json({
@@ -159,6 +184,7 @@ export const register = async (req, res) => {
                 email: savedUser.email,
                 isVerified: savedUser.isVerified,
                 role: savedUser.role,
+                assignedAdmin: savedUser.assignedAdmin,
                 profileImage: `data:${savedUser.profileImageType};base64,${profileImageBase64}`
             }
         });
