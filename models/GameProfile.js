@@ -4,7 +4,7 @@ const gameSchema = new mongoose.Schema({
     gameName: {
         type: String,
         required: true,
-        enum: ['Firekirin', 'Juwa', 'OrionStar', 'PandaMaster', 'GameVault', 'Yolo', 'MilkyWay'],
+        enum: ['Firekirin', 'Juwa', 'OrionStar', 'CashMachine', 'GameVault', 'YoLo', 'MilkyWay'],
         trim: true
     },
     gameId: {
