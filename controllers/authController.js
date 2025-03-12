@@ -384,9 +384,16 @@ export const verifyEmail = async (req, res) => {
     }
 };
 
+// Updated controller
 export const resendVerification = async (req, res) => {
     try {
-        const user = await User.findById(req.user.userId);
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
